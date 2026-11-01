@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Phase 1 build artifacts (once the Go implementation lands alongside this)
+/prepkit
+/dist/
+*.db
+*.db-shm
+*.db-wal
+
+# Local template packs under development
+/templates-local/

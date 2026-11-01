@@ -1,0 +1,70 @@
+name: validate
+
+on:
+  push:
+    paths:
+      - 'templates/**'
+      - 'schema/**'
+      - 'validate.py'
+      - '.github/workflows/validate.yml'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  templates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install jsonschema pyyaml
+
+      - name: Validate bundled templates
+        run: python3 validate.py
+
+      - name: Confirm the validator rejects bad input
+        run: |
+          # The validator must exit nonzero on a deliberately broken template.
+          # A validator that passes everything is worse than none, because it
+          # produces false confidence in contributed packs.
+          mkdir -p /tmp/negative
+          cat > /tmp/negative/bad.yaml <<'EOF'
+          spec_version: "0.1"
+          id: bad-template
+          name: Deliberately Broken
+          layer: home
+          edc_tier: 2
+          items:
+            - id: orphan-sub
+              name: Thing
+              category: water
+              quantity: 1
+              unit: ea
+              substitutes: [does-not-exist]
+            - id: zero-in-base
+              name: Removed In Base
+              category: food
+              quantity: 0
+              unit: ea
+            - id: no-check
+              name: Degrading Thing
+              category: power
+              quantity: 1
+              unit: ea
+              consumable:
+                degrades_without_expiry: true
+            - id: bad-cat
+              name: Wrong Category
+              category: nonsense
+              quantity: 1
+              unit: ea
+          EOF
+          if python3 validate.py /tmp/negative; then
+            echo "FAIL: validator accepted a template with six known errors"
+            exit 1
+          fi
+          echo "OK: validator correctly rejected the broken template"
